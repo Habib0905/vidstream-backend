@@ -4,7 +4,7 @@
   "type": "module",
   "main": "index.js",
   "scripts": {
-    "dev": "nodemon -r dotenv/config src/index.js"
+    "dev": "nodemon -r dotenv/config --legacy-watch src/index.js"
   },
   "author": "Habib Hussain",
   "license": "ISC",
