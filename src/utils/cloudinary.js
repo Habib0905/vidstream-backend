@@ -8,6 +8,36 @@ cloudinary.config({
   api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
+
+
+const removeFromCloudinary = async (url) => {
+  const parts = url.split('/');
+
+  // Find index of the version part (starts with 'v' + numbers)
+  const versionIndex = parts.findIndex(
+    part => part.startsWith('v') && /^\d+$/.test(part.slice(1))
+  );
+
+  if (versionIndex === -1 || versionIndex + 1 >= parts.length) {
+    return null; // can't extract
+  }
+
+  // Get all parts after the version (can include folders)
+  const publicIdParts = parts.slice(versionIndex + 1);
+
+  // Join and remove the file extension (.jpg, .png, etc.)
+  const publicId = publicIdParts.join('/').replace(/\.[^/.]+$/, '');
+
+  const response = await cloudinary.uploader.destroy(publicId, (error, result) => {
+    if (error) {
+      console.error('Error deleting image:', error);
+    } else {
+      console.log('Delete result:', result);
+    }
+  });
+  return response;
+}
+
 const uploadOnCloudinary = async (localFilePath) => {
   try {
     if (!localFilePath) return null;
@@ -26,4 +56,4 @@ const uploadOnCloudinary = async (localFilePath) => {
   }
 };
 
-export { uploadOnCloudinary };
+export { uploadOnCloudinary, removeFromCloudinary};

@@ -1,7 +1,7 @@
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { ApiError } from "../utils/ApiError.js";
 import { User } from "../models/user.model.js";
-import { uploadOnCloudinary } from "../utils/cloudinary.js";
+import { uploadOnCloudinary, removeFromCloudinary} from "../utils/cloudinary.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import jwt from "jsonwebtoken";
 
@@ -279,6 +279,8 @@ const updateUserAvatar = asyncHandler(async (req, res) => {
   if (!avatarResponse) {
     throw new ApiError(500, "Failed to upload avatar image");
   }
+
+
   //update the avatar url in the database
   const user = await User.findByIdAndUpdate(
     req.user._id,
@@ -291,6 +293,15 @@ const updateUserAvatar = asyncHandler(async (req, res) => {
       new: true,
     }
   );
+
+    //remove old avatar from cloudinary
+  const oldAvatarUrl = req.user.avatar;
+  const removalResponse = await removeFromCloudinary(oldAvatarUrl)
+  if (!removalResponse) {
+    throw new ApiError(500, "Failed to remove old avatar image from cloudinary");
+  }
+  
+
   //send response with updated user details
   return res
     .status(200)
@@ -322,6 +333,15 @@ const updateUserCoverImage = asyncHandler(async (req, res) => {
       new: true,
     }
   );
+
+
+  if (req.user.coverImage) {
+    const oldCoverImageUrl = req.user.coverImage;
+    const removalResponse = await removeFromCloudinary(oldCoverImageUrl)
+    if (!removalResponse) {
+      throw new ApiError(500, "Failed to remove old cover image from cloudinary");
+    }
+  }
   //send response with updated user details
   return res
     .status(200)
