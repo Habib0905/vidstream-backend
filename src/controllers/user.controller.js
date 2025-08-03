@@ -4,6 +4,7 @@ import { User } from "../models/user.model.js";
 import { uploadOnCloudinary, removeFromCloudinary} from "../utils/cloudinary.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import jwt from "jsonwebtoken";
+import { mongoose } from "mongoose";
 
 //generates access token and refresh token for user : -
 const generateAccessTokenandRefreshToken = async (userId) => {
@@ -213,7 +214,7 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
 });
 
 //current password change controller : -
-const changeCurrerntPassword = asyncHandler(async (req, res) => {
+const changeCurrentPassword = asyncHandler(async (req, res) => {
   //take current pasword, new password from request body
   const { currentPassword, newPassword } = req.body;
   //find user by id
@@ -360,11 +361,13 @@ const getUserChannelProfile = asyncHandler(async (req, res) => {
   //get channel information using aggregation pipeline
   const channel = await User.aggregate([
     {
+      //find user by username
       $match : {
         username: username.toLowerCase()
       } 
     },
     {
+      //lookup to get subscribers array
       $lookup: {
         from: "subscriptions",
         localField: "_id",
@@ -373,6 +376,7 @@ const getUserChannelProfile = asyncHandler(async (req, res) => {
       }
     },
     {
+      //lookup to get channels subscribed to by the user
       $lookup: {
         from: "subscriptions",
         localField: "_id",
@@ -381,6 +385,7 @@ const getUserChannelProfile = asyncHandler(async (req, res) => {
       }
     },
     {
+      //add fields of subscribers count, channels subscribed to count and isSubscribed
       $addFields: {
         subscribersCount: {
           $size: "subscribers"
@@ -398,6 +403,7 @@ const getUserChannelProfile = asyncHandler(async (req, res) => {
     }
     },
     {
+      //project the fields to return
       $project:{
         fullName: 1,
         username: 1,
@@ -420,15 +426,65 @@ const getUserChannelProfile = asyncHandler(async (req, res) => {
   .json(new ApiResponse(200, channel[0], "Channel profile fetched successfully"))
 })
 
+//get watch history controller : -
+const getWatchHistroy = asyncHandler(async (req, res) => {
+
+  const user = await User.aggregate([
+    {
+      $match: {
+        _id : new mongoose.Types.ObjectId(req.user._id)
+      }
+    },
+    {
+      $lookup: {
+        from: "videos",
+        localField: "watchHistory",
+        foreignField: "_id",
+        as : "watchHistory",
+        pipeline: [
+          {
+            $lookup:{
+              from:"users",
+              localField: "owner",
+              foreignField: "_id",
+              as: "owner"
+            }
+          },
+          {
+            $project: {
+              fullName: 1,
+              username: 1,
+              avatar: 1,
+            }
+          },
+          {
+            $addFields: {
+              owner: {
+                $first: "$owner"
+
+              }
+            }
+          }
+        ]
+      }
+    }
+  ])
+return res
+  .status(200)
+  .json(new ApiResponse(200, user[0].watchHistory, "Watch history fetched successfully"));
+
+})
+
 export {
   registerUser,
   loginUser,
   logoutUser,
   refreshAccessToken,
-  changeCurrerntPassword,
+  changeCurrentPassword,
   getCurrentUser,
   updateAccountDetails,
   updateUserCoverImage,
   updateUserAvatar,
-  getUserChannelProfile
+  getUserChannelProfile,
+  getWatchHistroy
 };
