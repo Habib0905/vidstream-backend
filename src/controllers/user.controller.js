@@ -144,7 +144,7 @@ const loginUser = asyncHandler(async (req, res) => {
 //user logout controller : -
 const logoutUser = asyncHandler(async (req, res) => {
   //remove refresh token from user
-  User.findByIdAndUpdate(
+  await User.findByIdAndUpdate(
     req.user._id,
     {
       $unset: { refreshToken: 1},
@@ -190,8 +190,10 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
     }
 
     // if it matches, generate new access token
-    const { accessToken, newRefreshToken } =
+    const { accessToken, refreshToken: newRefreshToken} =
       await generateAccessTokenandRefreshToken(user._id);
+      
+
     //send new access token in cookies
     const options = {
       httpOnly: false,
@@ -199,8 +201,8 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
     };
     res
       .status(200)
-      .cookies("accessToken", accessToken, options)
-      .cookies("refreshToken", newRefreshToken, options)
+      .cookie("accessToken", accessToken, options)
+      .cookie("refreshToken", newRefreshToken, options)
       .json(
         new ApiResponse(
           200,
